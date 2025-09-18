@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF.js 測試頁面</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    canvas { border: 1px solid #ccc; background: #fff; width: 100%; max-width: 800px; }
+    #status { margin-top: 10px; font-weight: bold; color: #d00; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
+  </script>
+</head>
+<body>
+  <h1>📄 PDF.js 測試頁面</h1>
+  <canvas id="pdfCanvas"></canvas>
+  <div id="status">載入中…</div>
+
+  <script>
+    const url = 'https://chday169.github.io/v1_scratch/data/pdfs/chapter1.pdf'; // ← 你可以改成任意 PDF
+
+    const canvas = document.getElementById('pdfCanvas');
+    const context = canvas.getContext('2d');
+
+    pdfjsLib.getDocument(url).promise.then(pdf => {
+      return pdf.getPage(1);
+    }).then(page => {
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      page.render(renderContext);
+      document.getElementById('status').textContent = '✅ PDF 顯示成功';
+    }).catch(err => {
+      console.error('PDF 載入失敗：', err.message);
+      document.getElementById('status').textContent = '❌ 無法顯示 PDF：' + err.message;
+    });
+  </script>
+</body>
+</html>
