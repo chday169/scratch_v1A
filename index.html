@@ -34,6 +34,11 @@
     <div style="flex: 1;">
       <canvas id="pdfCanvas"></canvas>
       <div class="status" id="statusText">尚未選擇 PDF</div>
+      <div style="margin-top: 10px;">
+        <button onclick="prevPage()">📄 上一頁</button>
+        <button onclick="nextPage()">📄 下一頁</button>
+        <span id="pageInfo" style="margin-left: 10px; font-weight: bold;"></span>
+      </div>
       <div id="stats">
         <div class="stat-block">👁️ 點閱：<span id="viewCount">00000</span></div>
         <div class="stat-block">👍 按讚：<span id="likeCount">00000</span></div>
@@ -46,6 +51,9 @@
     const manifestURL = './data/manifest.json';
     let pdfList = [];
     let currentIndex = -1;
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentPDF = null;
 
     async function loadPDFList() {
       try {
@@ -73,27 +81,15 @@
     function showPDF(index) {
       if (index < 0 || index >= pdfList.length) return;
       currentIndex = index;
-      pdfList[index].views = (pdfList[index].views || 0) + 1;
+      currentPage = 1;
 
       const fileURL = pdfList[index].url;
-      const canvas = document.getElementById('pdfCanvas');
-      const context = canvas.getContext('2d');
-
       document.getElementById('statusText').textContent = '⏳ 載入中…';
 
       pdfjsLib.getDocument(fileURL).promise.then(pdf => {
-        return pdf.getPage(1);
-      }).then(page => {
-        const scale = 1.5;
-        const viewport = page.getViewport({ scale });
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport
-        };
-        page.render(renderContext);
+        currentPDF = pdf;
+        totalPages = pdf.numPages;
+        renderPage(currentPage);
         document.getElementById('statusText').textContent =
           `📘 第 ${index + 1} 項 / 共 ${pdfList.length} 項：${pdfList[index].title}`;
       }).catch(err => {
@@ -102,15 +98,40 @@
       });
 
       document.getElementById('pdfSelect').value = index;
+      pdfList[index].views = (pdfList[index].views || 0) + 1;
       updateStats(index);
     }
 
-    function updateStats(index) {
-      const item = pdfList[index];
-      document.getElementById('viewCount').textContent =
-        String(item.views || 0).padStart(5, '0');
-      document.getElementById('likeCount').textContent =
-        String(item.likes || 0).padStart(5, '0');
+    function renderPage(pageNum) {
+      currentPDF.getPage(pageNum).then(page => {
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.getElementById('pdfCanvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        };
+        page.render(renderContext);
+        document.getElementById('pageInfo').textContent = `📄 第 ${pageNum} 頁 / 共 ${totalPages} 頁`;
+      });
+    }
+
+    function prevPage() {
+      if (currentPDF && currentPage > 1) {
+        currentPage--;
+        renderPage(currentPage);
+      }
+    }
+
+    function nextPage() {
+      if (currentPDF && currentPage < totalPages) {
+        currentPage++;
+        renderPage(currentPage);
+      }
     }
 
     function prevPDF() {
@@ -128,8 +149,16 @@
       }
     }
 
+    function updateStats(index) {
+      const item = pdfList[index];
+      document.getElementById('viewCount').textContent =
+        String(item.views || 0).padStart(5, '0');
+      document.getElementById('likeCount').textContent =
+        String(item.likes || 0).padStart(5, '0');
+    }
+
     function goBack() {
-      window.location.href = './'; // 返回根目錄或首頁
+      window.location.href = './';
     }
 
     document.getElementById('pdfSelect').addEventListener('change', function () {
